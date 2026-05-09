@@ -49,10 +49,14 @@ type FeedItem = {
   thumbnail?: string;
 };
 
-const fetchReddit = async (): Promise<FeedItem[]> => {
-  const res = await fetch(REDDIT_URL, {
+const fetchWithTimeout = (url: string, ms: number) =>
+  fetch(url, {
     headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+    signal: AbortSignal.timeout(ms),
   });
+
+const fetchReddit = async (): Promise<FeedItem[]> => {
+  const res = await fetchWithTimeout(REDDIT_URL, 5000);
   if (!res.ok) throw new Error(`Reddit ${res.status}`);
   const json = await res.json();
   const children: RedditChild[] = json?.data?.children ?? [];
@@ -74,9 +78,7 @@ const fetchReddit = async (): Promise<FeedItem[]> => {
 };
 
 const fetchBluesky = async (): Promise<FeedItem[]> => {
-  const res = await fetch(BLUESKY_URL, {
-    headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-  });
+  const res = await fetchWithTimeout(BLUESKY_URL, 5000);
   if (!res.ok) throw new Error(`Bluesky ${res.status}`);
   const json = await res.json();
   const posts: BlueskyPost[] = json?.posts ?? [];

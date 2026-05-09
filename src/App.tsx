@@ -8,6 +8,7 @@ import { LayerSwitcher } from './components/LayerSwitcher';
 import { RotateToggle } from './components/RotateToggle';
 import { StarField } from './components/StarField';
 import { LiveFeed } from './components/LiveFeed';
+import { ChatDrawer } from './components/ChatDrawer';
 import { SOURCES, type Sighting, type SightingSource } from './types';
 import { HAS_MAPTILER_KEY, type LayerStyle } from './mapStyles';
 import {
@@ -27,6 +28,10 @@ function App() {
   const [layerStyle, setLayerStyle] = useState<LayerStyle>('satellite');
   const [autoRotate, setAutoRotate] = useState(true);
   const [liveFeedOpen, setLiveFeedOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia('(min-width: 768px)').matches;
+  });
   const [liveItems, setLiveItems] = useState<LiveFeedItem[]>([]);
   const [liveErrors, setLiveErrors] = useState<string[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -134,14 +139,44 @@ function App() {
   };
 
   return (
-    <div className="relative flex h-full">
-      <aside className="z-30 flex w-72 shrink-0 flex-col gap-6 border-r border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur">
-        <header>
-          <h1 className="text-lg font-semibold text-zinc-100">UFO Encounters</h1>
-          <p className="mt-1 text-xs text-zinc-500">
-            Cross-reference of historical UAP sightings and the May 2026 Pentagon
-            PURSUE release.
-          </p>
+    <div className="relative h-full">
+      {!sidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+          className="absolute top-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/85 text-zinc-200 backdrop-blur hover:border-orange-400/50 hover:text-orange-300"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+          </svg>
+        </button>
+      )}
+
+      <aside
+        className={`absolute top-0 left-0 z-30 flex h-full w-72 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-zinc-800 bg-zinc-950/90 p-5 backdrop-blur transition-transform duration-300 md:relative md:max-w-none ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:-translate-x-full md:w-0 md:p-0 md:border-0'
+        }`}
+      >
+        <header className="flex items-start justify-between gap-2">
+          <div>
+            <h1 className="text-lg font-semibold text-zinc-100">UFO Encounters</h1>
+            <p className="mt-1 text-xs text-zinc-500">
+              Cross-reference of historical UAP sightings and the May 2026 Pentagon
+              PURSUE release.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Hide menu"
+            title="Hide menu (full globe view)"
+            className="shrink-0 rounded border border-zinc-700 px-2 py-1 text-[10px] tracking-widest text-zinc-400 uppercase hover:text-zinc-100"
+          >
+            ← Hide
+          </button>
         </header>
 
         <div className="space-y-2 rounded-md border border-zinc-800 bg-zinc-900/50 p-3">
@@ -228,7 +263,11 @@ function App() {
         </div>
       </aside>
 
-      <main className="relative flex-1 overflow-hidden bg-black">
+      <main
+        className={`relative h-full overflow-hidden bg-black transition-all duration-300 ${
+          sidebarOpen ? 'md:ml-72' : 'ml-0'
+        }`}
+      >
         <StarField count={260} />
 
         <div className="absolute inset-0">
@@ -261,6 +300,7 @@ function App() {
         </div>
 
         <SightingDetail sighting={selected} onClose={handleClose} />
+        <ChatDrawer />
       </main>
 
       <LiveFeed

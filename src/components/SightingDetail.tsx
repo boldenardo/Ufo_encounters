@@ -51,7 +51,7 @@ export function SightingDetail({ sighting, onClose }: Props) {
   };
 
   return (
-    <aside className="absolute top-0 right-0 z-10 flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-zinc-800 bg-zinc-950/95 p-6 backdrop-blur">
+    <aside className="absolute top-0 right-0 z-30 flex h-full w-full flex-col overflow-y-auto border-l border-zinc-800 bg-zinc-950/95 p-6 backdrop-blur sm:max-w-md">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <span
