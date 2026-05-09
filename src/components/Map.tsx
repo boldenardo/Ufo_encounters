@@ -8,6 +8,7 @@ import {
 import { forwardRef, useCallback, useEffect, useMemo, useRef } from 'react';
 import { SOURCES, type Sighting } from '../types';
 import { MAP_STYLES, type LayerStyle } from '../mapStyles';
+import type { LiveFeedItem } from '../liveFeed';
 
 const HEATMAP_MAX_ZOOM = 4;
 
@@ -30,15 +31,30 @@ const SOURCE_COLOR_EXPRESSION = [
   '#ffffff',
 ] as unknown as maplibregl.ExpressionSpecification;
 
+const buildLiveGeoJson = (items: LiveFeedItem[]) => ({
+  type: 'FeatureCollection' as const,
+  features: items
+    .filter((i) => i.location)
+    .map((i) => ({
+      type: 'Feature' as const,
+      properties: { id: i.id, source: i.source, title: i.title, url: i.url },
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [i.location!.lon, i.location!.lat],
+      },
+    })),
+});
+
 type Props = {
   sightings: Sighting[];
   style: LayerStyle;
   onSelect: (s: Sighting) => void;
   autoRotate: boolean;
+  liveItems?: LiveFeedItem[];
 };
 
 export const Map = forwardRef<MapRef, Props>(function Map(
-  { sightings, style, onSelect, autoRotate },
+  { sightings, style, onSelect, autoRotate, liveItems = [] },
   ref
 ) {
   const innerRef = useRef<MapRef | null>(null);
@@ -51,6 +67,7 @@ export const Map = forwardRef<MapRef, Props>(function Map(
   };
 
   const data = useMemo(() => buildGeoJson(sightings), [sightings]);
+  const liveData = useMemo(() => buildLiveGeoJson(liveItems), [liveItems]);
   const sightingsById = useMemo(() => {
     const m: Record<string, Sighting> = {};
     sightings.forEach((s) => {
@@ -118,8 +135,14 @@ export const Map = forwardRef<MapRef, Props>(function Map(
     (e: MapLayerMouseEvent) => {
       const feature = e.features?.[0];
       if (!feature) return;
+      const layerId = feature.layer?.id;
       const id = feature.properties?.id as string | undefined;
       if (!id) return;
+      if (layerId === 'live-points') {
+        const url = feature.properties?.url as string | undefined;
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        return;
+      }
       const sighting = sightingsById[id];
       if (sighting) onSelect(sighting);
     },
@@ -144,7 +167,7 @@ export const Map = forwardRef<MapRef, Props>(function Map(
       projection="globe"
       style={{ width: '100%', height: '100%' }}
       attributionControl={{ compact: true }}
-      interactiveLayerIds={['sightings-points']}
+      interactiveLayerIds={['sightings-points', 'live-points']}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -249,6 +272,66 @@ export const Map = forwardRef<MapRef, Props>(function Map(
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 1.5,
             'circle-stroke-opacity': 0.9,
+            'circle-opacity': 1,
+          }}
+        />
+      </Source>
+
+      <Source id="live" type="geojson" data={liveData}>
+        <Layer
+          id="live-glow"
+          type="circle"
+          paint={{
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              0,
+              14,
+              4,
+              22,
+              10,
+              40,
+            ],
+            'circle-color': [
+              'match',
+              ['get', 'source'],
+              'reddit',
+              '#ff4500',
+              'bluesky',
+              '#1083fe',
+              '#22d3ee',
+            ] as unknown as maplibregl.ExpressionSpecification,
+            'circle-opacity': 0.45,
+            'circle-blur': 1,
+          }}
+        />
+        <Layer
+          id="live-points"
+          type="circle"
+          paint={{
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              0,
+              7,
+              4,
+              10,
+              10,
+              16,
+            ],
+            'circle-color': [
+              'match',
+              ['get', 'source'],
+              'reddit',
+              '#ff4500',
+              'bluesky',
+              '#1083fe',
+              '#22d3ee',
+            ] as unknown as maplibregl.ExpressionSpecification,
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 2,
             'circle-opacity': 1,
           }}
         />

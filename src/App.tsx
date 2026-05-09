@@ -7,8 +7,14 @@ import { SightingDetail } from './components/SightingDetail';
 import { LayerSwitcher } from './components/LayerSwitcher';
 import { RotateToggle } from './components/RotateToggle';
 import { StarField } from './components/StarField';
+import { LiveFeed } from './components/LiveFeed';
 import { SOURCES, type Sighting, type SightingSource } from './types';
 import { HAS_MAPTILER_KEY, type LayerStyle } from './mapStyles';
+import {
+  fetchLiveFeed,
+  type LiveFeedItem,
+  type LiveFeedSource,
+} from './liveFeed';
 
 function App() {
   const mapRef = useRef<MapRef | null>(null);
@@ -20,6 +26,45 @@ function App() {
   const [selected, setSelected] = useState<Sighting | null>(null);
   const [layerStyle, setLayerStyle] = useState<LayerStyle>('satellite');
   const [autoRotate, setAutoRotate] = useState(true);
+  const [liveFeedOpen, setLiveFeedOpen] = useState(false);
+  const [liveItems, setLiveItems] = useState<LiveFeedItem[]>([]);
+  const [liveErrors, setLiveErrors] = useState<string[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveFetched, setLiveFetched] = useState<number | null>(null);
+  const [liveSourcesEnabled, setLiveSourcesEnabled] = useState<
+    Set<LiveFeedSource>
+  >(new Set(['reddit', 'bluesky']));
+  const [showLiveOnGlobe, setShowLiveOnGlobe] = useState(true);
+
+  const loadLive = async () => {
+    setLiveLoading(true);
+    try {
+      const { items, errors } = await fetchLiveFeed();
+      setLiveItems(items);
+      setLiveErrors(errors);
+      setLiveFetched(Date.now());
+    } finally {
+      setLiveLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if ((liveFeedOpen || showLiveOnGlobe) && liveFetched === null) loadLive();
+  }, [liveFeedOpen, showLiveOnGlobe, liveFetched]);
+
+  const liveItemsForMap = useMemo(() => {
+    if (!showLiveOnGlobe) return [];
+    return liveItems.filter((i) => liveSourcesEnabled.has(i.source));
+  }, [liveItems, liveSourcesEnabled, showLiveOnGlobe]);
+
+  const toggleLiveSource = (s: LiveFeedSource) => {
+    setLiveSourcesEnabled((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetch('/data/sightings.json')
@@ -90,7 +135,7 @@ function App() {
 
   return (
     <div className="relative flex h-full">
-      <aside className="z-20 flex w-72 shrink-0 flex-col gap-6 border-r border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur">
+      <aside className="z-30 flex w-72 shrink-0 flex-col gap-6 border-r border-zinc-800 bg-zinc-950/80 p-5 backdrop-blur">
         <header>
           <h1 className="text-lg font-semibold text-zinc-100">UFO Encounters</h1>
           <p className="mt-1 text-xs text-zinc-500">
@@ -98,6 +143,63 @@ function App() {
             PURSUE release.
           </p>
         </header>
+
+        <div className="space-y-2 rounded-md border border-zinc-800 bg-zinc-900/50 p-3">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-xs font-medium text-zinc-200">
+              <span className="relative inline-flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-400" />
+              </span>
+              Live Feed
+            </span>
+            <button
+              type="button"
+              onClick={() => setLiveFeedOpen((v) => !v)}
+              className="rounded border border-zinc-700 px-2 py-0.5 text-[10px] tracking-widest text-zinc-400 uppercase hover:text-zinc-100"
+            >
+              {liveFeedOpen ? 'Hide' : 'Open'}
+            </button>
+          </div>
+
+          <label className="flex cursor-pointer items-center gap-2 text-[11px] text-zinc-400">
+            <input
+              type="checkbox"
+              checked={showLiveOnGlobe}
+              onChange={(e) => setShowLiveOnGlobe(e.target.checked)}
+              className="accent-orange-400"
+            />
+            Show on globe
+            {liveItemsForMap.length > 0 && (
+              <span className="ml-auto text-zinc-500">
+                {liveItemsForMap.length} pin{liveItemsForMap.length === 1 ? '' : 's'}
+              </span>
+            )}
+          </label>
+
+          <div className="flex gap-1">
+            {(['reddit', 'bluesky'] as LiveFeedSource[]).map((src) => {
+              const on = liveSourcesEnabled.has(src);
+              const color = src === 'reddit' ? '#ff4500' : '#1083fe';
+              const label = src === 'reddit' ? 'Reddit' : 'Bluesky';
+              return (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => toggleLiveSource(src)}
+                  className="flex-1 rounded border px-2 py-1 text-[10px] tracking-wide transition"
+                  style={{
+                    borderColor: on ? color : '#3f3f46',
+                    background: on ? `${color}22` : 'transparent',
+                    color: on ? color : '#71717a',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <SourceFilter enabled={enabled} onToggle={toggle} counts={counts} />
 
@@ -136,6 +238,7 @@ function App() {
             style={layerStyle}
             onSelect={handleSelect}
             autoRotate={autoRotate}
+            liveItems={liveItemsForMap}
           />
         </div>
 
@@ -159,6 +262,17 @@ function App() {
 
         <SightingDetail sighting={selected} onClose={handleClose} />
       </main>
+
+      <LiveFeed
+        open={liveFeedOpen}
+        onClose={() => setLiveFeedOpen(false)}
+        items={liveItems}
+        errors={liveErrors}
+        loading={liveLoading}
+        lastFetched={liveFetched}
+        onRefresh={loadLive}
+        enabledSources={liveSourcesEnabled}
+      />
     </div>
   );
 }

@@ -37,6 +37,26 @@ Open <http://localhost:5173>
 
 > The app **runs without a MapTiler key** — it falls back to Carto (dark) + ESRI (satellite). Get a free key at [maptiler.com](https://cloud.maptiler.com/) for full-quality tiles.
 
+### Live Feed (optional)
+
+The Live Feed pulls recent posts from r/UFOs and Bluesky #UAP via a Vercel
+Serverless Function at `api/live-feed.ts` (needed because both APIs block
+direct browser requests with CORS).
+
+- **Production (Vercel)**: works automatically once deployed.
+- **Local dev**: `npm run dev` does NOT serve the API endpoint. To test the
+  Live Feed locally, install Vercel CLI and run:
+
+  ```bash
+  npm i -g vercel
+  vercel dev
+  ```
+
+  This serves both the Vite app and the API at <http://localhost:3000>.
+
+If the API isn't reachable, the rest of the app keeps working — only the Live
+Feed shows a warning banner.
+
 ### Restricting your MapTiler key
 
 Before deploying, restrict your key in the MapTiler dashboard under
