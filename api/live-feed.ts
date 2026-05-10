@@ -49,14 +49,21 @@ type FeedItem = {
   thumbnail?: string;
 };
 
-const fetchWithTimeout = (url: string, ms: number) =>
-  fetch(url, {
-    headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-    signal: AbortSignal.timeout(ms),
-  });
+const fetchWithTimeout = async (url: string, ms: number) => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 const fetchReddit = async (): Promise<FeedItem[]> => {
-  const res = await fetchWithTimeout(REDDIT_URL, 5000);
+  const res = await fetchWithTimeout(REDDIT_URL, 4000);
   if (!res.ok) throw new Error(`Reddit ${res.status}`);
   const json = await res.json();
   const children: RedditChild[] = json?.data?.children ?? [];
@@ -78,7 +85,7 @@ const fetchReddit = async (): Promise<FeedItem[]> => {
 };
 
 const fetchBluesky = async (): Promise<FeedItem[]> => {
-  const res = await fetchWithTimeout(BLUESKY_URL, 5000);
+  const res = await fetchWithTimeout(BLUESKY_URL, 4000);
   if (!res.ok) throw new Error(`Bluesky ${res.status}`);
   const json = await res.json();
   const posts: BlueskyPost[] = json?.posts ?? [];

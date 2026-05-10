@@ -1,14 +1,34 @@
 // Vercel Serverless Function — Groq-backed Q&A about the UFO Encounters dataset.
 // The LLM is locked to the project's sightings list and refuses off-topic questions.
 
-import sightingsData from './sightings.json';
-
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
-const sightingsString = JSON.stringify(sightingsData);
+let cachedSightings: string | null = null;
+
+const loadSightings = async (req: Request): Promise<string> => {
+  if (cachedSightings) return cachedSightings;
+  const origin = new URL(req.url).origin;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
+  try {
+    const res = await fetch(`${origin}/data/sightings.json`, {
+      signal: ctrl.signal,
+    });
+    if (res.ok) {
+      cachedSightings = await res.text();
+      return cachedSightings;
+    }
+  } catch {
+    // fall through to empty
+  } finally {
+    clearTimeout(timer);
+  }
+  cachedSightings = '[]';
+  return cachedSightings;
+};
 
 const buildSystemPrompt = (sightings: string) => `You are the in-house archivist for "UFO Encounters", an open-source 3D atlas of UAP cases. You answer questions about the cases in the dataset below.
 
@@ -74,7 +94,8 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const systemPrompt = buildSystemPrompt(sightingsString);
+  const sightings = await loadSightings(req);
+  const systemPrompt = buildSystemPrompt(sightings);
 
   try {
     const groqRes = await fetch(GROQ_URL, {
@@ -89,7 +110,11 @@ export default async function handler(req: Request): Promise<Response> {
         max_tokens: 800,
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: (() => {
+        const c = new AbortController();
+        setTimeout(() => c.abort(), 12000);
+        return c.signal;
+      })(),
     });
 
     if (!groqRes.ok) {
