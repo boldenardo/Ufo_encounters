@@ -58,7 +58,7 @@ export function ChatDrawer() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? 'Close archive chat' : 'Open archive chat'}
-        className={`absolute right-4 bottom-4 z-30 flex h-12 w-12 items-center justify-center rounded-full border shadow-lg transition ${
+        className={`fixed right-4 bottom-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border text-xl shadow-lg transition sm:h-12 sm:w-12 sm:text-base ${
           open
             ? 'border-orange-400 bg-orange-400 text-black'
             : 'border-zinc-700 bg-zinc-950/90 text-zinc-200 hover:border-orange-400/50 hover:text-orange-300'
@@ -68,7 +68,7 @@ export function ChatDrawer() {
       </button>
 
       {open && (
-        <aside className="absolute right-4 bottom-20 z-30 flex h-[min(75vh,560px)] w-[min(92vw,380px)] flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur">
+        <aside className="fixed inset-x-2 bottom-20 z-30 flex h-[min(75vh,560px)] flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur sm:inset-x-auto sm:right-4 sm:w-[min(92vw,380px)]">
           <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
             <div>
               <h3 className="text-sm font-semibold text-zinc-100">

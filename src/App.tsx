@@ -310,8 +310,9 @@ function App() {
         </div>
 
         <SightingDetail sighting={selected} onClose={handleClose} />
-        <ChatDrawer />
       </main>
+
+      <ChatDrawer />
 
       <LiveFeed
         open={liveFeedOpen}
