@@ -106,15 +106,32 @@ const fetchBluesky = async (): Promise<FeedItem[]> => {
   });
 };
 
+// Hard ceiling so we always respond before Vercel's maxDuration kills us
+const HARD_DEADLINE_MS = 8000;
+
+const withDeadline = <T,>(p: Promise<T>, label: string): Promise<T> =>
+  Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} hard-deadline ${HARD_DEADLINE_MS}ms`)), HARD_DEADLINE_MS)
+    ),
+  ]);
+
 export default async function handler(_req: Request): Promise<Response> {
   const errors: string[] = [];
-  const results = await Promise.allSettled([fetchReddit(), fetchBluesky()]);
-
   const items: FeedItem[] = [];
-  const labels = ['Reddit', 'Bluesky'];
+  const tasks = [
+    { label: 'Reddit', fn: fetchReddit },
+    { label: 'Bluesky', fn: fetchBluesky },
+  ];
+
+  const results = await Promise.allSettled(
+    tasks.map((t) => withDeadline(t.fn(), t.label))
+  );
+
   for (const [i, r] of results.entries()) {
     if (r.status === 'fulfilled') items.push(...r.value);
-    else errors.push(`${labels[i]}: ${(r.reason as Error).message ?? 'failed'}`);
+    else errors.push(`${tasks[i].label}: ${(r.reason as Error)?.message ?? 'failed'}`);
   }
 
   items.sort((a, b) => b.createdAt - a.createdAt);
@@ -123,7 +140,6 @@ export default async function handler(_req: Request): Promise<Response> {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      // Cache for 60s on the edge so refresh-spam doesn't hammer the upstreams
       'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
     },
   });
