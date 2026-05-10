@@ -25,7 +25,9 @@ function App() {
   );
   const [range, setRange] = useState<[number, number] | null>(null);
   const [selected, setSelected] = useState<Sighting | null>(null);
-  const [layerStyle, setLayerStyle] = useState<LayerStyle>('satellite');
+  // Default to 'dark' so the app looks great even without a MapTiler key
+  // (the fallback dark style is from Carto and always works).
+  const [layerStyle, setLayerStyle] = useState<LayerStyle>('dark');
   const [autoRotate, setAutoRotate] = useState(true);
   const [liveFeedOpen, setLiveFeedOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(() => {

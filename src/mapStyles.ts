@@ -9,6 +9,8 @@ export type StyleMeta = {
 
 const KEY = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
 
+// Fallback styles work without any API key. Used when VITE_MAPTILER_KEY is missing.
+// Satellite uses an inline raster style pointing at ESRI World Imagery (free, no key).
 const fallback: Record<LayerStyle, StyleMeta> = {
   dark: {
     id: 'dark',
@@ -19,8 +21,28 @@ const fallback: Record<LayerStyle, StyleMeta> = {
   satellite: {
     id: 'satellite',
     label: 'Satellite',
-    url: 'https://api.maptiler.com/maps/hybrid/style.json?key=public',
-    attribution: '© MapTiler © OpenStreetMap contributors',
+    url: 'data:application/json,' +
+      encodeURIComponent(
+        JSON.stringify({
+          version: 8,
+          sources: {
+            esri: {
+              type: 'raster',
+              tiles: [
+                'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+              ],
+              tileSize: 256,
+              attribution:
+                'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+              maxzoom: 19,
+            },
+          },
+          layers: [{ id: 'esri', type: 'raster', source: 'esri' }],
+          glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+          sky: {},
+        })
+      ),
+    attribution: '© Esri World Imagery',
   },
   streets: {
     id: 'streets',
