@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import { SOURCES, type Sighting } from '../types';
 
-const KEY = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
-
-const satelliteThumb = (lon: number, lat: number) => {
-  if (KEY) {
-    return `https://api.maptiler.com/maps/hybrid/static/${lon},${lat},10/600x300.png?key=${KEY}`;
-  }
-  return `https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${
+// Satellite snapshot uses ESRI World Imagery (free, no key required, no domain restriction).
+// MapTiler static maps require a separate billable plan, so we don't use them here.
+const satelliteThumb = (lon: number, lat: number) =>
+  `https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bbox=${
     lon - 0.4
   },${lat - 0.2},${lon + 0.4},${lat + 0.2}&bboxSR=4326&size=600,300&format=png&transparent=false&f=image`;
-};
 
 const mapEmbedUrl = (lon: number, lat: number) =>
   `https://maps.google.com/maps?q=${lat},${lon}&t=k&z=12&output=embed`;

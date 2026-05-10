@@ -141,13 +141,13 @@ function App() {
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full overflow-hidden">
       {!sidebarOpen && (
         <button
           type="button"
           onClick={() => setSidebarOpen(true)}
           aria-label="Open menu"
-          className="absolute top-4 left-4 z-40 flex h-10 w-10 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/85 text-zinc-200 backdrop-blur hover:border-orange-400/50 hover:text-orange-300"
+          className="fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/85 text-zinc-200 backdrop-blur hover:border-orange-400/50 hover:text-orange-300"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="4" y1="6" x2="20" y2="6" />
@@ -157,9 +157,17 @@ function App() {
         </button>
       )}
 
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
+          aria-hidden
+        />
+      )}
+
       <aside
-        className={`absolute top-0 left-0 z-30 flex h-full w-72 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-zinc-800 bg-zinc-950/90 p-5 backdrop-blur transition-transform duration-300 md:relative md:max-w-none ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:-translate-x-full md:w-0 md:p-0 md:border-0'
+        className={`fixed top-0 left-0 z-40 flex h-full w-72 max-w-[85vw] flex-col gap-6 overflow-y-auto border-r border-zinc-800 bg-zinc-950/95 p-5 backdrop-blur transition-transform duration-300 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <header className="flex items-start justify-between gap-2">
@@ -266,8 +274,8 @@ function App() {
       </aside>
 
       <main
-        className={`relative h-full overflow-hidden bg-black transition-all duration-300 ${
-          sidebarOpen ? 'md:ml-72' : 'ml-0'
+        className={`relative h-full overflow-hidden bg-black transition-[padding] duration-300 ${
+          sidebarOpen ? 'md:pl-72' : 'pl-0'
         }`}
       >
         <StarField count={260} />

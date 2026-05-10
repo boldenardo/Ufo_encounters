@@ -37,7 +37,7 @@ export function LiveFeed({
   const visible = items.filter((i) => enabledSources.has(i.source));
 
   return (
-    <aside className="absolute top-0 left-0 z-20 flex h-full w-full flex-col border-r border-zinc-800 bg-zinc-950/95 backdrop-blur sm:max-w-sm md:left-72">
+    <aside className="fixed top-0 left-0 z-30 flex h-full w-full flex-col border-r border-zinc-800 bg-zinc-950/95 backdrop-blur sm:max-w-sm md:left-72">
       <header className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
         <div>
           <h2 className="text-sm font-semibold text-zinc-100">Live Feed</h2>
