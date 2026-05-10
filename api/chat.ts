@@ -58,7 +58,8 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
+  // Use globalThis.process to avoid needing @types/node — works in any Node-like runtime
+  const apiKey = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GROQ_API_KEY;
   if (!apiKey) {
     return new Response(
       JSON.stringify({
