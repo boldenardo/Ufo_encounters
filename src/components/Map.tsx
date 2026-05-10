@@ -133,12 +133,14 @@ export const Map = forwardRef<MapRef, Props>(function Map(
 
   const handleClick = useCallback(
     (e: MapLayerMouseEvent) => {
+      // Stop the click from being treated as a globe pan
+      e.originalEvent.stopPropagation();
       const feature = e.features?.[0];
       if (!feature) return;
       const layerId = feature.layer?.id;
       const id = feature.properties?.id as string | undefined;
       if (!id) return;
-      if (layerId === 'live-points') {
+      if (layerId === 'live-points' || layerId === 'live-hit') {
         const url = feature.properties?.url as string | undefined;
         if (url) window.open(url, '_blank', 'noopener,noreferrer');
         return;
@@ -167,7 +169,7 @@ export const Map = forwardRef<MapRef, Props>(function Map(
       projection="globe"
       style={{ width: '100%', height: '100%' }}
       attributionControl={{ compact: true }}
-      interactiveLayerIds={['sightings-points', 'live-points']}
+      interactiveLayerIds={['sightings-hit', 'sightings-points', 'live-hit', 'live-points']}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -175,13 +177,21 @@ export const Map = forwardRef<MapRef, Props>(function Map(
         userInteracting.current = true;
       }}
       onMouseUp={() => {
-        userInteracting.current = false;
+        // Small grace period so a click that lands after mouseup
+        // doesn't race against the auto-rotate moving the globe.
+        setTimeout(() => {
+          userInteracting.current = false;
+        }, 600);
       }}
       onTouchStart={() => {
         userInteracting.current = true;
       }}
       onTouchEnd={() => {
-        userInteracting.current = false;
+        // Mobile: the click event fires after touchend. Hold off on
+        // re-enabling rotation so the click can hit the same pixel.
+        setTimeout(() => {
+          userInteracting.current = false;
+        }, 800);
       }}
     >
       <Source id="sightings" type="geojson" data={data}>
@@ -262,17 +272,35 @@ export const Map = forwardRef<MapRef, Props>(function Map(
               ['linear'],
               ['zoom'],
               0,
-              5,
-              4,
               7,
+              4,
               10,
-              12,
+              10,
+              14,
             ],
             'circle-color': SOURCE_COLOR_EXPRESSION,
             'circle-stroke-color': '#ffffff',
-            'circle-stroke-width': 1.5,
-            'circle-stroke-opacity': 0.9,
+            'circle-stroke-width': 2,
+            'circle-stroke-opacity': 0.95,
             'circle-opacity': 1,
+          }}
+        />
+        <Layer
+          id="sightings-hit"
+          type="circle"
+          paint={{
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              0,
+              22,
+              4,
+              26,
+              10,
+              30,
+            ],
+            'circle-opacity': 0,
           }}
         />
       </Source>
@@ -315,9 +343,9 @@ export const Map = forwardRef<MapRef, Props>(function Map(
               ['linear'],
               ['zoom'],
               0,
-              7,
+              8,
               4,
-              10,
+              12,
               10,
               16,
             ],
@@ -333,6 +361,24 @@ export const Map = forwardRef<MapRef, Props>(function Map(
             'circle-stroke-color': '#ffffff',
             'circle-stroke-width': 2,
             'circle-opacity': 1,
+          }}
+        />
+        <Layer
+          id="live-hit"
+          type="circle"
+          paint={{
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              0,
+              24,
+              4,
+              28,
+              10,
+              32,
+            ],
+            'circle-opacity': 0,
           }}
         />
       </Source>
