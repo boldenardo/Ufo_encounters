@@ -1,35 +1,14 @@
 // Vercel Serverless Function — Groq-backed Q&A about the UFO Encounters dataset.
 // The LLM is locked to the project's sightings list and refuses off-topic questions.
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import sightingsData from './sightings.json';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL = 'llama-3.3-70b-versatile';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
-let cachedSightings: string | null = null;
-
-const loadSightings = (): string => {
-  if (cachedSightings) return cachedSightings;
-  // Vercel bundles public/ at the project root; fall back to relative path
-  const candidates = [
-    join(process.cwd(), 'public', 'data', 'sightings.json'),
-    join(process.cwd(), 'data', 'sightings.json'),
-  ];
-  for (const p of candidates) {
-    try {
-      const raw = readFileSync(p, 'utf-8');
-      cachedSightings = raw;
-      return raw;
-    } catch {
-      // try next path
-    }
-  }
-  cachedSightings = '[]';
-  return cachedSightings;
-};
+const sightingsString = JSON.stringify(sightingsData);
 
 const buildSystemPrompt = (sightings: string) => `You are the in-house archivist for "UFO Encounters", an open-source 3D atlas of UAP cases. You answer questions about the cases in the dataset below.
 
@@ -95,8 +74,7 @@ export default async function handler(req: Request): Promise<Response> {
     });
   }
 
-  const sightings = loadSightings();
-  const systemPrompt = buildSystemPrompt(sightings);
+  const systemPrompt = buildSystemPrompt(sightingsString);
 
   try {
     const groqRes = await fetch(GROQ_URL, {
